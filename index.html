@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Anime Watch - Login</title>
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  h1 {
+    margin-bottom: 1rem;
+    font-weight: 700;
+    text-align: center;
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+  }
+  #login-form, #admin-panel, #anime-viewer {
+    background: rgba(0,0,0,0.7);
+    padding: 2rem;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+  }
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1.2rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  button {
+    width: 100%;
+    padding: 0.65rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #fff;
+    background-color: #f85f73;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #e34357;
+  }
+  #error-msg {
+    color: #ff5656;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+  .hidden {
+    display: none;
+  }
+  /* Anime list */
+  #anime-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  #anime-list li {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #444;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  #anime-list li:hover {
+    background-color: #305f72;
+  }
+  iframe {
+    width: 100%;
+    height: 300px;
+    border: none;
+    border-radius: 10px;
+  }
+  #logout-btn {
+    background-color: #444;
+    margin-top: 1rem;
+    font-weight: 600;
+  }
+  #logout-btn:hover {
+    background-color: #222;
+  }
+  /* Responsive for mobile */
+  @media (max-width: 400px) {
+    h1 {
+      font-size: 1.8rem;
+    }
+    iframe {
+      height: 200px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Anime Watch</h1>
+
+<div id="error-msg" class="hidden">Wrong Account</div>
+
+<div id="login-form">
+  <label for="username">Username</label>
+  <input id="username" type="text" autocomplete="username" placeholder="Enter username" />
+  <label for="password">Password</label>
+  <input id="password" type="password" autocomplete="current-password" placeholder="Enter password" />
+  <button id="login-btn">Login</button>
+</div>
+
+<div id="anime-viewer" class="hidden">
+  <h2>Welcome, <span id="user-display"></span></h2>
+  <ul id="anime-list">
+    <!-- Anime titles will appear here -->
+  </ul>
+  <iframe id="video-frame" src="" allowfullscreen></iframe>
+  <button id="logout-btn">Logout</button>
+</div>
+
+<div id="admin-panel" class="hidden">
+  <h2>Admin Panel</h2>
+  <label for="new-anime-title">Anime Title</label>
+  <input id="new-anime-title" type="text" placeholder="Add new anime title" />
+  <label for="new-anime-url">Anime Video URL</label>
+  <input id="new-anime-url" type="text" placeholder="Add anime embed URL (YouTube, etc.)" />
+  <button id="add-anime-btn">Add Anime</button>
+  <button id="admin-logout-btn" style="margin-top:1rem; background:#a33;">Logout Admin</button>
+</div>
+
+<script>
+  // Credentials
+  const adminUser = 'admin';
+  const adminPass = 'admin';
+  const validUser = 'Natsu';
+  const validPass = 'Natsu';
+
+  // Elements
+  const loginFormEl = document.getElementById('login-form');
+  const animeViewerEl = document.getElementById('anime-viewer');
+  const adminPanelEl = document.getElementById('admin-panel');
+  const errorMsgEl = document.getElementById('error-msg');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const adminLogoutBtn = document.getElementById('admin-logout-btn');
+  const userDisplayEl = document.getElementById('user-display');
+  const animeListEl = document.getElementById('anime-list');
+  const videoFrameEl = document.getElementById('video-frame');
+  const newAnimeTitleInput = document.getElementById('new-anime-title');
+  const newAnimeUrlInput = document.getElementById('new-anime-url');
+  const addAnimeBtn = document.getElementById('add-anime-btn');
+
+  // State
+  let currentUser = null;
+  // Stored animes in localStorage under 'animes' key
+  // Each anime: {title, url}
+  // Prepopulate with sample animes
+  const defaultAnimes = [
+    { title: "Naruto", url: "https://www.youtube.com/embed/U1Zxd2oOCGg" },
+    { title: "One Piece", url: "https://www.youtube.com/embed/mou-7D1pC4U" },
+    { title: "Attack on Titan", url: "https://www.youtube.com/embed/MGRm4IzK1SQ" }
+  ];
+
+  function getAnimes() {
+    let stored = localStorage.getItem('animes');
+    if (!stored) {
+      localStorage.setItem('animes', JSON.stringify(defaultAnimes));
+      return defaultAnimes.slice();
+    }
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return defaultAnimes.slice();
+    }
+  }
+
+  function saveAnimes(animes) {
+    localStorage.setItem('animes', JSON.stringify(animes));
+  }
+
+  function clearInputs() {
+    usernameInput.value = '';
+    passwordInput.value = '';
+  }
+
+  function showError(msg) {
+    errorMsgEl.textContent = msg;
+    errorMsgEl.classList.remove('hidden');
+  }
+
+  function hideError() {
+    errorMsgEl.classList.add('hidden');
+  }
+
+  function renderAnimeList() {
+    animeListEl.innerHTML = '';
+    const animes = getAnimes();
+    if (animes.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = "No anime available. Admin can add some!";
+      li.style.fontStyle = 'italic';
+      animeListEl.appendChild(li);
+      videoFrameEl.src = '';
+      return;
+    }
+    animes.forEach((anime, index) => {
+      const li = document.createElement('li');
+      li.textContent = anime.title;
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      li.addEventListener('click', () => {
+        videoFrameEl.src = anime.url;
+      });
+      li.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          li.click();
+        }
+      });
+      animeListEl.appendChild(li);
+    });
+    // Auto load first anime if any
+    if (animes.length) {
+      videoFrameEl.src = animes[0].url;
+    }
+  }
+
+  function login() {
+    hideError();
+    const user = usernameInput.value.trim();
+    const pass = passwordInput.value.trim();
+
+    if ((user === validUser && pass === validPass) || (user === adminUser && pass === adminPass)) {
+      currentUser = user;
+      clearInputs();
+      loginFormEl.classList.add('hidden');
+      errorMsgEl.classList.add('hidden');
+      if (currentUser === adminUser) {
+        adminPanelEl.classList.remove('hidden');
+        animeViewerEl.classList.add('hidden');
+      } else {
+        userDisplayEl.textContent = currentUser;
+        animeViewerEl.classList.remove('hidden');
+        adminPanelEl.classList.add('hidden');
+        renderAnimeList();
+      }
+    } else {
+      showError('Wrong Account');
+    }
+  }
+
+  function logout() {
+    currentUser = null;
+    videoFrameEl.src = '';
+    adminPanelEl.classList.add('hidden');
+    animeViewerEl.classList.add('hidden');
+    loginFormEl.classList.remove('hidden');
+  }
+
+  // Admin: Add new anime
+  function addAnime() {
+    const title = newAnimeTitleInput.value.trim();
+    const url = newAnimeUrlInput.value.trim();
+    if (!title || !url) {
+      alert('Please fill in both title and URL.');
+      return;
+    }
+    const animes = getAnimes();
+    animes.push({ title: title, url: url });
+    saveAnimes(animes);
+    newAnimeTitleInput.value = '';
+    newAnimeUrlInput.value = '';
+    alert(`Anime "${title}" added.`);
+  }
+
+  loginBtn.addEventListener('click', login);
+  // Enter key submits login
+  passwordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      login();
+    }
+  });
+  logoutBtn.addEventListener('click', logout);
+  adminLogoutBtn.addEventListener('click', logout);
+  addAnimeBtn.addEventListener('click', addAnime);
+
+</script>
+
+</body>
+</html>
+
+```
